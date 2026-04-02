@@ -2,7 +2,7 @@ import React from 'react'
 import { sidebarStyles } from '../assets/dummyStyles'
 import questionsData from '../assets/dummyData'
 import { useState, useRef, useEffect } from 'react'
-import { Globe, Layout, Code, Cpu, Database, Coffee, Terminal, ChevronDown, ChevronRight,Menu,X ,CheckCircle, XCircle ,Sparkles, Trophy, Award, BookOpen,Star, Zap, Target} from 'lucide-react'
+import { Globe, Layout, Code, Cpu, Database, Coffee, Terminal, ChevronDown, ChevronRight, Menu, X, CheckCircle, XCircle, Sparkles, Trophy, Award, BookOpen, Star, Zap, Target } from 'lucide-react'
 import axios from 'axios'
 import { toast } from "react-toastify";
 
@@ -14,6 +14,12 @@ const Sidebar = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [userAnswers, setUserAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
+
+  // ===== Timer: 10 seconds per question =====
+  const TIME_PER_QUESTION_SECONDS = 10;
+  const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION_SECONDS);
+  const timerRef = useRef(null);
+  // ===== End Timer =====
 
   const submittedRef = useRef(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -40,7 +46,6 @@ const Sidebar = () => {
       document.body.style.overflow = "";
     };
   }, [isSidebarOpen]);
-
 
   const technologies = [
     {
@@ -105,7 +110,6 @@ const Sidebar = () => {
     },
   ];
 
-
   const levels = [
     {
       id: "basic",
@@ -161,6 +165,11 @@ const Sidebar = () => {
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
+  const getQuestions = () => {
+    if (!selectedTech || !selectedLevel) return [];
+    return questionsData[selectedTech]?.[selectedLevel] || [];
+  };
+
   const handleAnswerSelect = (answerIndex) => {
     const newAnswers = {
       ...userAnswers,
@@ -175,11 +184,6 @@ const Sidebar = () => {
         setShowResults(true);
       }
     }, 500);
-  };
-
-  const getQuestions = () => {
-    if (!selectedTech || !selectedLevel) return [];
-    return questionsData[selectedTech]?.[selectedLevel] || [];
   };
 
   const calculateScore = () => {
@@ -294,6 +298,67 @@ const Sidebar = () => {
       toast.error("Could not save result. Check console or network.");
     }
   }
+
+  // ===== Timer Effect: 10 seconds per question =====
+  useEffect(() => {
+    // Stop timer if quiz not started or results page shown
+    if (!selectedTech || !selectedLevel || showResults) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setTimeLeft(TIME_PER_QUESTION_SECONDS);
+      return;
+    }
+
+    // Reset timer whenever the question changes
+    setTimeLeft(TIME_PER_QUESTION_SECONDS);
+
+    // Clear any existing interval before starting a new one
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          // time up
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+
+          // If user already answered, do nothing
+          if (userAnswers[currentQuestion] !== undefined) return 0;
+
+          // Auto move to next question (no answer recorded)
+          setTimeout(() => {
+            const total = getQuestions().length;
+            if (currentQuestion < total - 1) {
+              setCurrentQuestion((q) => q + 1);
+            } else {
+              setShowResults(true);
+            }
+          }, 0);
+
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Cleanup to prevent multiple timers
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTech, selectedLevel, currentQuestion, showResults]);
+  // ===== End Timer Effect =====
 
   useEffect(() => {
     if (showResults) {
@@ -416,10 +481,6 @@ const Sidebar = () => {
 
           </div>
         </aside >
-
-
-
-
 
         {/* QUESTION AND ANSWER ALSO RESULT */}
         <main className={sidebarStyles.mainContent}>
@@ -622,15 +683,23 @@ const Sidebar = () => {
                     <div className={sidebarStyles.scoreProgressBar}>
                       <div
                         className={`${sidebarStyles.scoreProgressFill} ${score.percentage >= 80
-                            ? "bg-green-400"
-                            : score.percentage >= 60
-                              ? "bg-yellow-400"
-                              : "bg-red-400"
+                          ? "bg-green-400"
+                          : score.percentage >= 60
+                            ? "bg-yellow-400"
+                            : "bg-red-400"
                           }`}
                         style={{ width: `${score.percentage}%` }}
                       />
                     </div>
                   </div>
+
+                  <button
+                    onClick={resetQuiz}
+                    className="mt-6 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition"
+                  >
+                    Restart Quiz
+                  </button>
+
                 </div>
               </div>
             </div>
@@ -646,6 +715,9 @@ const Sidebar = () => {
                   </h1>
                   <span className={sidebarStyles.quizCounter}>
                     Question {currentQuestion + 1} of {questions.length}
+                  </span>
+                  <span className={sidebarStyles.quizCounter} style={{ marginLeft: 12 }}>
+                    Time Left: {timeLeft}s
                   </span>
                 </div>
 
@@ -683,12 +755,12 @@ const Sidebar = () => {
                         onClick={() => handleAnswerSelect(index)}
                         disabled={userAnswers[currentQuestion] !== undefined}
                         className={`${sidebarStyles.optionButton} ${isSelected
-                            ? isCorrect
-                              ? sidebarStyles.optionCorrect
-                              : sidebarStyles.optionIncorrect
-                            : showFeedback && isCorrect
-                              ? sidebarStyles.optionCorrect
-                              : sidebarStyles.optionNormal
+                          ? isCorrect
+                            ? sidebarStyles.optionCorrect
+                            : sidebarStyles.optionIncorrect
+                          : showFeedback && isCorrect
+                            ? sidebarStyles.optionCorrect
+                            : sidebarStyles.optionNormal
                           }`}
                       >
                         <div className={sidebarStyles.optionContent}>
