@@ -17,7 +17,7 @@ const Login = ({ onLoginSuccess = null }) => {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -179,6 +179,10 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
                     <p className={loginStyles.errorText}>{errors.password}</p>
                   )}
                 </label>
+
+                <div style={{ marginTop: "8px", textAlign: "right" }}>
+                  <Link to="/forgot-password">Forgot password?</Link>
+                </div>
 
                 {submitError && (
                   <p className={loginStyles.submitError}>{submitError}</p>

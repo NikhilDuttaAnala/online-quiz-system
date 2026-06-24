@@ -4,6 +4,8 @@ import Home from './pages/Home.jsx'
 import Login from './components/Login.jsx'
 import SignUp from './components/Signup.jsx'
 import MyResultPage from './pages/MyResultPage.jsx'
+import ResetPassword from './pages/ResetPassword.jsx'
+import ForgotPassword from './pages/ForgotPassword.jsx'
 
 function RequireAuth({ children }) {
   const isLoggedIn = Boolean(localStorage.getItem('authToken'));
@@ -24,6 +26,10 @@ const App = () => {
       <Route path='/login' element={<Login />} />
 
       <Route path='/signup' element={<SignUp />} />
+
+      <Route path='/forgot-password' element={<ForgotPassword />} />
+
+      <Route path='/reset-password/:token' element={<ResetPassword />} />
 
       <Route 
       path="/result" 
