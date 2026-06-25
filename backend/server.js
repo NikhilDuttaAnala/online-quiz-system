@@ -4,6 +4,7 @@ import 'dotenv/config';
 import connectDB from "./config/db.js";
 import userRouter from "./routes/userRoutes.js";
 import resultsRouter from "./routes/resultsRoute.js";
+import hintRouter from "./routes/hintRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +21,7 @@ connectDB();
 
 app.use("/api/auth", userRouter);
 app.use("/api/results", resultsRouter);
+app.use("/api/hint", hintRouter);
 
 app.get("/", (req, res) => {
     res.send("API is running...");

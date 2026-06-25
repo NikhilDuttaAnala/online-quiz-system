@@ -14,9 +14,12 @@ const Sidebar = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [userAnswers, setUserAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
+  const [hintRequested, setHintRequested] = useState({});
+  const [currentHint, setCurrentHint] = useState(null);
+  const [loadingHint, setLoadingHint] = useState(false);
 
   // ===== Timer: 10 seconds per question =====
-  const TIME_PER_QUESTION_SECONDS = 10;
+  const TIME_PER_QUESTION_SECONDS = 60;
   const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION_SECONDS);
   const timerRef = useRef(null);
   // ===== End Timer =====
@@ -186,6 +189,44 @@ const Sidebar = () => {
     }, 500);
   };
 
+  const handleGetHint = async () => {
+    if (hintRequested[currentQuestion]) return;
+
+    setLoadingHint(true);
+
+    try {
+      const payload = {
+        question: currentQ.question,
+        correctAnswerIndex: currentQ.correctAnswer,
+        options: currentQ.options
+      };
+
+      const resp = await axios.post(`${API_BASE}/api/hint/generate-hint`, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeader(),
+        },
+        timeout: 10000,
+      });
+
+      if (resp.data && resp.data.success) {
+        setCurrentHint(resp.data.hint);
+        setHintRequested(prev => ({
+          ...prev,
+          [currentQuestion]: true
+        }));
+        toast.info('💡 Hint received!');
+      } else {
+        toast.warn('Could not generate hint');
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      toast.error("Failed to get hint");
+    } finally {
+      setLoadingHint(false);
+    }
+  };
+
   const calculateScore = () => {
     const questions = getQuestions();
     let correct = 0;
@@ -207,6 +248,8 @@ const Sidebar = () => {
     setCurrentQuestion(0);
     setUserAnswers({});
     setShowResults(false);
+    setHintRequested({}); // ✅ ADD THIS - resets all hints
+    setCurrentHint(null); // ✅ ADD THIS - clears current hint
     submittedRef.current = false;
   };
 
@@ -303,6 +346,8 @@ const Sidebar = () => {
   useEffect(() => {
     // Stop timer if quiz not started or results page shown
     if (!selectedTech || !selectedLevel || showResults) {
+      setHintRequested({});
+      setCurrentHint(null);
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
@@ -310,6 +355,9 @@ const Sidebar = () => {
       setTimeLeft(TIME_PER_QUESTION_SECONDS);
       return;
     }
+
+    // ✅ CLEAR HINT WHEN QUESTION CHANGES (Fresh container)
+    setCurrentHint(null);
 
     // Reset timer whenever the question changes
     setTimeLeft(TIME_PER_QUESTION_SECONDS);
@@ -730,6 +778,32 @@ const Sidebar = () => {
                     }}
                   />
                 </div>
+              </div>
+
+              {/* Hint Section */}
+              <div className="max-w-3xl mx-auto mb-4 bg-blue-50 p-4 rounded-xl border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">💡</span>
+                    <span className="text-sm font-medium text-blue-900">Need help?</span>
+                  </div>
+                  <button
+                    onClick={handleGetHint}
+                    disabled={hintRequested[currentQuestion] || loadingHint || userAnswers[currentQuestion] !== undefined}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition ${hintRequested[currentQuestion] || userAnswers[currentQuestion] !== undefined
+                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                  >
+                    {loadingHint ? 'Generating...' : hintRequested[currentQuestion] ? '✓ Hint Used' : 'Get Hint'}
+                  </button>
+                </div>
+
+                {currentHint && (
+                  <div className="mt-3 p-3 bg-white rounded-lg border-l-4 border-blue-500">
+                    <p className="text-sm text-gray-700">{currentHint}</p>
+                  </div>
+                )}
               </div>
 
               <div className={sidebarStyles.questionContainer}>
