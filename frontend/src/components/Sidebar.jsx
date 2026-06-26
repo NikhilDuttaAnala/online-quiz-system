@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Globe, Layout, Code, Cpu, Database, Coffee, Terminal, ChevronDown, ChevronRight, Menu, X, CheckCircle, XCircle, Sparkles, Trophy, Award, BookOpen, Star, Zap, Target } from 'lucide-react'
 import axios from 'axios'
 import { toast } from "react-toastify";
+import Certificate from './Certificate.jsx';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'
 
@@ -740,6 +741,14 @@ const Sidebar = () => {
                       />
                     </div>
                   </div>
+
+                  <Certificate
+                    userName={localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')).name : 'Student'}
+                    score={score}
+                    technology={selectedTech}
+                    level={selectedLevel}
+                    date={new Date().toLocaleDateString()}
+                  />
 
                   <button
                     onClick={resetQuiz}
